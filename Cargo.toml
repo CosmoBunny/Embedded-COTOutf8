@@ -1,8 +1,19 @@
 [package]
-name = "embedded_animation"
+name = "embedded_cotoutf8"
 version = "0.1.0"
 edition = "2021"
+authors = ["Anurag"]
+description = "COTO is a library that translates numerical primitives into readable ASCII UTF-8 arrays"
+repository = "https://github.com/unknownK19/Embedded-COTOutf8.git"
+categories = ["embedded", "utf8"]
+license = "MIT"
+license-file = "LICENSE"
 
-[dependencies]
-embedded-graphics = "0.8.1"
-embedded-graphics-simulator = "0.6.0"
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
+[[examples]]
+path = "examples"
