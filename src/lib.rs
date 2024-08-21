@@ -8,6 +8,10 @@ pub trait COtoUTF8<const O: usize> {
     fn coto_utf8(&self) -> [u8; O];
 }
 
+pub trait COtoHex<const O: usize> {
+    fn coto_hex(&self) -> [u8; O];
+}
+
 impl COto<1> for u8 {
     fn coto(&self) -> [u8; 1] {
         self.to_le_bytes()
@@ -42,6 +46,38 @@ impl COtoUTF8<3> for u8 {
 }
 //Future plan
 // struct F32((i8, i8, u16));
+
+impl COtoHex<2> for u8 {
+    fn coto_hex(&self) -> [u8; 2] {
+        let mut sample = [0u8; 2];
+        for i in 0..2 {
+            let last_4value = self >> (4 * i) & 0xF % 16;
+            sample[i] = match last_4value {
+                0..=9 => b"0"[0] + last_4value,
+                10..=15 => 55 + last_4value,
+                _ => 0,
+            }
+        }
+        sample.reverse();
+        sample
+    }
+}
+
+impl COtoHex<4> for u16 {
+    fn coto_hex(&self) -> [u8; 4] {
+        let mut sample = [0u8; 4];
+        for i in 0..4 {
+            let last_4value = self >> (4 * i) & 0xF % 16;
+            sample[i] = match last_4value {
+                0..=9 => b"0"[0] + last_4value as u8,
+                10..=15 => 55 + last_4value as u8,
+                _ => 0,
+            }
+        }
+        sample.reverse();
+        sample
+    }
+}
 
 impl COtoUTF8<9> for f32 {
     fn coto_utf8(&self) -> [u8; 9] {
