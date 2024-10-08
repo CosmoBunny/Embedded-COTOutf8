@@ -1,9 +1,5 @@
 #![no_std]
 
-pub trait COto<const C: usize> {
-    fn coto(&self) -> [u8; C];
-}
-
 pub trait COtoUTF8<const O: usize> {
     fn coto_utf8(&self) -> [u8; O];
 }
@@ -12,49 +8,174 @@ pub trait COtoHex<const O: usize> {
     fn coto_hex(&self) -> [u8; O];
 }
 
-impl COto<1> for u8 {
-    fn coto(&self) -> [u8; 1] {
-        self.to_le_bytes()
-    }
-}
-
-impl COto<4> for f32 {
-    fn coto(&self) -> [u8; 4] {
-        self.to_le_bytes()
-    }
-}
-
 impl COtoUTF8<3> for u8 {
     fn coto_utf8(&self) -> [u8; 3] {
         let mut digit: [u8; 3] = [0; 3];
-        let mut n = *self;
-        let mut i = 2;
+        let n = *self;
 
-        while n > 0 {
-            digit[i] = (n % 10) as u8;
-            n /= 10;
-            if i == 0 {
-                break;
-            }
-            i -= 1;
+        for (i, j) in digit.iter_mut().enumerate() {
+            *j = n / (10u8.pow(i as u32)) % 10
         }
-        for i in 0..digit.len() {
-            digit[i] += 48
-        }
+
+        digit.reverse();
         digit
     }
 }
-//Future plan
-// struct F32((i8, i8, u16));
+/**
+F32 (cap F 32) is another floating point in future. Unlike f32 IEEE 754-2008, it has less error but no precise as f32.
+so here's How it look
+
+## F32
+
+- exponential of 10 : E,
+
+- Mantissa : M
+
+EEEE_EEEE MMMM_MMMM_MMMM_MMMM_MMMM_MMMM
+|---i8--| |--- i24 = i8 + u16---------|
+
+NOTE: Current WIP
+*/
+
+#[derive(Default)]
+pub struct F32(i8, i8, u16);
+
+impl F32 {
+    pub fn mantissa(&self) -> i32 {
+        let mut buffer = [0u8; 4];
+        buffer[1..=1].copy_from_slice(&self.1.to_be_bytes());
+        buffer[2..=3].copy_from_slice(&self.2.to_be_bytes());
+        if self.1.is_negative() {
+            buffer[0] = 0xFF;
+            buffer[2..=3].copy_from_slice(&(!self.2).to_be_bytes());
+        };
+        i32::from_be_bytes(buffer)
+    }
+    pub fn exponent(&self) -> i8 {
+        self.0
+    }
+}
+
+impl From<u8> for F32 {
+    fn from(value: u8) -> Self {
+        Self(0, 0, value as u16)
+    }
+}
+
+impl From<i8> for F32 {
+    fn from(value: i8) -> Self {
+        F32(
+            0,
+            i8::from_be_bytes([if value.ge(&0) { 0x00 } else { 0xff }]),
+            if value.ge(&0) {
+                u16::from_be_bytes([0x00, value.to_be_bytes()[0]])
+            } else {
+                !u16::from_be_bytes([0xff, value.to_be_bytes()[0]])
+            },
+        )
+    }
+}
+
+impl From<u16> for F32 {
+    fn from(value: u16) -> Self {
+        Self(0, 0, value)
+    }
+}
+impl From<i16> for F32 {
+    fn from(value: i16) -> Self {
+        let numbytes = value.to_be_bytes();
+        F32(
+            0,
+            i8::from_be_bytes([if value.ge(&0) { 0x00 } else { 0xff }]),
+            if value.ge(&0) {
+                u16::from_be_bytes([numbytes[0], numbytes[1]])
+            } else {
+                !u16::from_be_bytes([numbytes[0], numbytes[1]])
+            },
+        )
+    }
+}
+impl From<u32> for F32 {
+    fn from(value: u32) -> Self {
+        let mut num = value;
+        let mut exponential: i8 = 0;
+        while !(0..={ 2u32.pow(24) - 1 }).contains(&num) {
+            exponential += 1;
+            num /= 10;
+        }
+        let numbytes = num.to_be_bytes();
+        F32(
+            exponential,
+            numbytes[1] as i8,
+            u16::from_be_bytes([numbytes[2], numbytes[3]]),
+        )
+    }
+}
+impl From<i32> for F32 {
+    fn from(value: i32) -> Self {
+        let mut num = value;
+        let mut exponential: i8 = 0;
+        while !(-{ 2i32.pow(23) }..={ 2i32.pow(23) - 1 }).contains(&num) {
+            if num.is_positive() {
+                exponential += 1
+            } else {
+                exponential -= 1
+            }
+            num /= 10;
+        }
+        let numbytes = num.to_be_bytes();
+        F32(
+            exponential,
+            numbytes[1] as i8,
+            if num.ge(&0) {
+                u16::from_be_bytes([numbytes[2], numbytes[3]])
+            } else {
+                !u16::from_be_bytes([numbytes[2], numbytes[3]])
+            },
+        )
+    }
+}
+impl From<f32> for F32 {
+    fn from(value: f32) -> Self {
+        let mut num = if value < 0. { -value } else { value };
+        let mut exponential: i8 = 0;
+        while !(0.0..={ 2i32.pow(23) - 1 } as f32).contains(&num) {
+            if num.is_sign_positive() {
+                exponential += 1;
+                num /= 10.
+            } else {
+                exponential -= 1;
+                num *= 10.
+            }
+        }
+        let numbytes = (num as i32).to_be_bytes();
+        F32(
+            exponential,
+            numbytes[1] as i8,
+            if num.ge(&0.) {
+                u16::from_be_bytes([numbytes[2], numbytes[3]])
+            } else {
+                !u16::from_be_bytes([numbytes[2], numbytes[3]])
+            },
+        )
+    }
+}
+// TODO:
+// impl Add for F32 {
+//     type Output = F32;
+//     fn add(self, rhs: Self) -> Self::Output {
+//
+//     }
+// }
 
 impl COtoHex<2> for u8 {
     fn coto_hex(&self) -> [u8; 2] {
         let mut sample = [0u8; 2];
-        for i in 0..2 {
-            let last_4value = self >> (4 * i) & 0xF % 16;
-            sample[i] = match last_4value {
-                0..=9 => b"0"[0] + last_4value,
-                10..=15 => 55 + last_4value,
+
+        for (i, j) in sample.iter_mut().enumerate() {
+            *j = match (self >> (4 * i) & 0x0F) % 16 {
+                int @ 0..=9 => b"0"[0] + int,
+                alpha @ 10..=15 => 55 + alpha,
                 _ => 0,
             }
         }
@@ -66,11 +187,27 @@ impl COtoHex<2> for u8 {
 impl COtoHex<4> for u16 {
     fn coto_hex(&self) -> [u8; 4] {
         let mut sample = [0u8; 4];
-        for i in 0..4 {
-            let last_4value = self >> (4 * i) & 0xF % 16;
-            sample[i] = match last_4value {
-                0..=9 => b"0"[0] + last_4value as u8,
-                10..=15 => 55 + last_4value as u8,
+
+        for (i, j) in sample.iter_mut().enumerate() {
+            *j = match ((self >> (4 * i) & 0x0F) % 16) as u8 {
+                int @ 0..=9 => b"0"[0] + int,
+                alpha @ 10..=15 => 55 + alpha,
+                _ => 0,
+            }
+        }
+        sample.reverse();
+        sample
+    }
+}
+
+impl COtoHex<8> for u32 {
+    fn coto_hex(&self) -> [u8; 8] {
+        let mut sample = [0u8; 8];
+
+        for (i, j) in sample.iter_mut().enumerate() {
+            *j = match ((self >> (4 * i) & 0x0F) % 16) as u8 {
+                int @ 0..=9 => b"0"[0] + int,
+                alpha @ 10..=15 => 55 + alpha,
                 _ => 0,
             }
         }
@@ -81,15 +218,18 @@ impl COtoHex<4> for u16 {
 
 impl COtoUTF8<9> for f32 {
     fn coto_utf8(&self) -> [u8; 9] {
-        if *self == f32::INFINITY {
-            *b"+INFINITY"
-        } else if *self == f32::NEG_INFINITY {
-            *b"-INFINITY"
-            // [43, 73, 78, 70, 73, 78, 73, 84, 89]
+        let mut buffer = [0u8; 9];
+        buffer[0] = if self.is_sign_negative() {
+            b"-"[0]
         } else {
-            let mut num = *self;
+            b" "[0]
+        };
+        if self.is_infinite() {
+            buffer[1..].copy_from_slice(b"INFINITY");
+        } else {
+            let mut num = if *self < 0. { -*self } else { *self };
             let mut exponential: i8 = 0;
-            while num < 0. || num > 10. {
+            while !(0. ..=10.).contains(&num) {
                 if num < 0. {
                     exponential -= 1;
                     num *= 10.;
@@ -98,79 +238,34 @@ impl COtoUTF8<9> for f32 {
                     num /= 10.;
                 }
             }
-            // let coto
-            let cotoexpo = exponential.coto_utf8();
-            match exponential {
-                // i8::MIN..=-100 | 100..=i8::MAX => {}
-                -99..=-10 | 10..=99 => {
-                    let cotonum = ((num * 1000.) as i16).coto_utf8();
-                    [
-                        cotonum[0],
-                        cotonum[2],
-                        0x2e,
-                        cotonum[3],
-                        cotonum[4],
-                        cotonum[5],
-                        0x45,
-                        cotoexpo[2],
-                        cotoexpo[3],
-                    ]
-                }
-                -9..=-1 | 1..=9 => {
-                    let cotonum = ((num * 10000.) as i32).coto_utf8();
-                    [
-                        cotonum[0],
-                        cotonum[6],
-                        0x2e,
-                        cotonum[7],
-                        cotonum[8],
-                        cotonum[9],
-                        cotonum[10],
-                        0x45,
-                        cotoexpo[3],
-                    ]
-                }
-                _ => {
-                    let cotonum = ((num * 100000.) as i32).coto_utf8();
-                    [
-                        cotonum[0],
-                        cotonum[4],
-                        cotonum[5],
-                        0x2e,
-                        cotonum[6],
-                        cotonum[7],
-                        cotonum[8],
-                        cotonum[9],
-                        cotonum[10],
-                    ]
-                }
+            if (-6..=3).contains(&exponential) {
+                let exponent = exponential.max(0) as usize;
+                buffer[2 + exponent] = b"."[0];
+                let cotonum = ((self * 1_000_000.0) as i32).coto_utf8();
+                buffer[1..={ exponent + 1 }].copy_from_slice(&cotonum[{ 4 - exponent }..=4]);
+                buffer[{ 3 + exponent }..].copy_from_slice(&cotonum[{ 5 + exponent }..]);
+            } else {
+                buffer[5..].copy_from_slice(&exponential.coto_utf8());
+                buffer[4] = b"E"[0];
+                buffer[1..=3].copy_from_slice(&num.coto_utf8()[1..=3])
             }
         }
+        buffer
     }
 }
 
 impl COtoUTF8<4> for i8 {
     fn coto_utf8(&self) -> [u8; 4] {
         let mut digit: [u8; 4] = [0; 4];
-        let mut n = self.abs();
-        let mut i = 3;
+        digit[0] = if self.is_negative() { b"-"[0] } else { b" "[0] };
+        let n = self.abs();
 
-        while n > 0 {
-            digit[i] = (n % 10) as u8;
-            n /= 10;
-            if i == 0 {
-                break;
-            }
-            i -= 1;
+        for (i, j) in digit[1..].iter_mut().enumerate() {
+            *j = (n / (10i8.pow(i as u32)) % 10) as u8 + b"0"[0]
         }
-        for i in 0..digit.len() {
-            digit[i] += 48
-        }
-        if self.is_positive() {
-            digit[0] = 0x2b
-        } else {
-            digit[0] = 0x2d
-        }
+
+        digit[1..].reverse();
+
         digit
     }
 }
@@ -178,25 +273,15 @@ impl COtoUTF8<4> for i8 {
 impl COtoUTF8<6> for i16 {
     fn coto_utf8(&self) -> [u8; 6] {
         let mut digit: [u8; 6] = [0; 6];
-        let mut n = self.abs();
-        let mut i = 5;
+        digit[0] = if self.is_negative() { b"-"[0] } else { b" "[0] };
+        let n = self.abs();
 
-        while n > 0 {
-            digit[i] = (n % 10) as u8;
-            n /= 10;
-            if i == 0 {
-                break;
-            }
-            i -= 1;
+        for (i, j) in digit[1..].iter_mut().enumerate() {
+            *j = (n / (10i16.pow(i as u32)) % 10) as u8 + b"0"[0]
         }
-        for i in 0..digit.len() {
-            digit[i] += 48
-        }
-        if self.is_positive() {
-            digit[0] = 0x2b
-        } else {
-            digit[0] = 0x2d
-        }
+
+        digit[1..].reverse();
+
         digit
     }
 }
@@ -204,25 +289,15 @@ impl COtoUTF8<6> for i16 {
 impl COtoUTF8<11> for i32 {
     fn coto_utf8(&self) -> [u8; 11] {
         let mut digit: [u8; 11] = [0; 11];
-        let mut n = self.abs();
-        let mut i = 10;
+        digit[0] = if self.is_negative() { b"-"[0] } else { b" "[0] };
+        let n = self.abs();
 
-        while n > 0 {
-            digit[i] = (n % 10) as u8;
-            n /= 10;
-            if i == 0 {
-                break;
-            }
-            i -= 1;
+        for (i, j) in digit[1..].iter_mut().enumerate() {
+            *j = (n / (10i32.pow(i as u32)) % 10) as u8 + b"0"[0]
         }
-        for i in 0..digit.len() {
-            digit[i] += 48
-        }
-        if self.is_positive() {
-            digit[0] = 0x2b
-        } else {
-            digit[0] = 0x2d
-        }
+
+        digit[1..].reverse();
+
         digit
     }
 }
@@ -230,20 +305,13 @@ impl COtoUTF8<11> for i32 {
 impl COtoUTF8<10> for u32 {
     fn coto_utf8(&self) -> [u8; 10] {
         let mut digit: [u8; 10] = [0; 10];
-        let mut n = *self;
-        let mut i = 9;
+        let n = *self;
 
-        while n > 0 {
-            digit[i] = (n % 10) as u8;
-            n /= 10;
-            if i == 0 {
-                break;
-            }
-            i -= 1;
+        for (i, j) in digit.iter_mut().enumerate() {
+            *j = (n / (10u32.pow(i as u32)) % 10) as u8
         }
-        for i in 0..digit.len() {
-            digit[i] += 48
-        }
+
+        digit.reverse();
         digit
     }
 }
@@ -251,31 +319,13 @@ impl COtoUTF8<10> for u32 {
 impl COtoUTF8<5> for u16 {
     fn coto_utf8(&self) -> [u8; 5] {
         let mut digit: [u8; 5] = [0; 5];
-        let mut n = *self;
-        let mut i = 4;
+        let n = *self;
 
-        while n > 0 {
-            digit[i] = (n % 10) as u8;
-            n /= 10;
-            if i == 0 {
-                break;
-            }
-            i -= 1;
+        for (i, j) in digit.iter_mut().enumerate() {
+            *j = (n / (10u16.pow(i as u32)) % 10) as u8
         }
-        for i in 0..digit.len() {
-            digit[i] += 48
-        }
+
+        digit.reverse();
         digit
     }
 }
-
-// Future plan
-/*
-trait LastThreeDigit {
-    fn lastthreedigit<const C: usize, const O: usize>(cot0_utf8: &dyn COtoUTF8<C>) -> [u8; 3];
-}
-
-trait LastFiveDigit {
-    fn lastthreedigit<const C: usize, const O: usize>(cot0_utf8: &dyn COtoUTF8<C>) -> [u8; 3];
-}
-*/

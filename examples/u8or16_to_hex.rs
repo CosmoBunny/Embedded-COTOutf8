@@ -1,5 +1,3 @@
-use std::u16;
-
 use embedded_cotoutf8::COtoHex;
 
 fn main() {

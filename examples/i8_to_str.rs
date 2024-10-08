@@ -1,4 +1,3 @@
-#![no_std]
 use embedded_cotoutf8::COtoUTF8;
 
 fn main() {
