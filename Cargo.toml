@@ -5,8 +5,8 @@ edition = "2021"
 authors = ["Anurag"]
 description = "COTO is a library that translates numerical primitives into readable ASCII UTF-8 arrays"
 repository = "https://github.com/unknownK19/Embedded-COTOutf8.git"
-categories = ["embedded", "UTF-8"]
-keywords = ["no_std", "int to utf8", "str"]
+categories = ["embedded"]
+keywords = ["no_std", "utf8", "str", "f32"]
 license = "MIT"
 license-file = "LICENSE"
 
