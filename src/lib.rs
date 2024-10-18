@@ -14,7 +14,7 @@ impl COtoUTF8<3> for u8 {
         let n = *self;
 
         for (i, j) in digit.iter_mut().enumerate() {
-            *j = n / (10u8.pow(i as u32)) % 10
+            *j = b"0"[0] + n / (10u8.pow(i as u32)) % 10
         }
 
         digit.reverse();
@@ -308,7 +308,7 @@ impl COtoUTF8<10> for u32 {
         let n = *self;
 
         for (i, j) in digit.iter_mut().enumerate() {
-            *j = (n / (10u32.pow(i as u32)) % 10) as u8
+            *j = (n / (10u32.pow(i as u32)) % 10) as u8 + b"0"[0]
         }
 
         digit.reverse();
@@ -322,10 +322,36 @@ impl COtoUTF8<5> for u16 {
         let n = *self;
 
         for (i, j) in digit.iter_mut().enumerate() {
-            *j = (n / (10u16.pow(i as u32)) % 10) as u8
+            *j = (n / (10u16.pow(i as u32)) % 10) as u8 + b"0"[0]
         }
 
         digit.reverse();
         digit
     }
+}
+
+#[test]
+fn utf8test() {
+    assert_eq!("123", core::str::from_utf8(&123u8.coto_utf8()).unwrap());
+    assert_eq!(
+        "12345",
+        core::str::from_utf8(&12345u16.coto_utf8()).unwrap()
+    );
+    assert_eq!(
+        "1234567890",
+        core::str::from_utf8(&1234567890u32.coto_utf8()).unwrap()
+    );
+    assert_eq!(" 123", core::str::from_utf8(&123i8.coto_utf8()).unwrap());
+    assert_eq!(
+        "-12345",
+        core::str::from_utf8(&(-12345i16).coto_utf8()).unwrap()
+    );
+    assert_eq!(
+        " 1234567890",
+        core::str::from_utf8(&1234567890i32.coto_utf8()).unwrap()
+    );
+    assert_eq!(
+        " 1.234567",
+        core::str::from_utf8(&1.234567f32.coto_utf8()).unwrap()
+    )
 }
