@@ -17,4 +17,9 @@ panic = "abort"
 panic = "abort"
 
 [features]
+default = ["ufmt"]
+ufmt = ["dep:ufmt"]
 floato = []
+
+[dependencies]
+ufmt = { version = "0.2", optional = true }

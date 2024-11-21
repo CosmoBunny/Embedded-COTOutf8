@@ -1,9 +1,42 @@
 #![no_std]
 
+/**
+COTO is derived from the Gujarati word કોતો, meaning 'engrave.' It refers to a concept where data sizes are fixed. COTO is a library that translates numerical primitives into readable ASCII UTF-8 arrays.
+
+## Example󰙨
+
+Convert primitives data type to specific Byte(character) array for str
+
+```rust
+    // for i8
+    let num: i8 = -127;
+    let binding = num.coto_utf8();
+    let result = core::str::from_utf8(&binding).unwrap();
+    assert_eq!(result, "-127")
+    // for f32
+    let num: f32 = 1524.001;
+    let binding = num.coto_utf8();
+    let result = core::str::from_utf8(&binding).unwrap();
+    println!("{}", result); // OUTPUT:` 1524.024`
+
+```
+
+Debug or Display for ufmt _By default ufmt feature enabled_ or fmt
+
+```rust
+    let num = DebugODisplay(44245.12f32);
+    println!("{}", num);
+    ufmt::uwriteln!(serial, "{}", num); // for ufmt
+```
+
+implemented for `i8`,`i16`,`132`,`i64`,`u8`,`u16`,`u32`,`f32`,`f64`
+*/
 use core::{
     f64,
     fmt::{Debug, Display},
 };
+
+use ufmt::{uDebug, uDisplay};
 
 #[cfg(feature = "floato")]
 pub mod floato;
@@ -37,8 +70,7 @@ where
     T: COtoUTF8<O>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str(core::str::from_utf8(&self.0.coto_utf8()).unwrap())
-            .unwrap();
+        f.write_str(core::str::from_utf8(&self.0.coto_utf8()).unwrap())?;
         Ok(())
     }
 }
@@ -48,8 +80,35 @@ where
     T: COtoUTF8<O>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str(core::str::from_utf8(&self.0.coto_utf8()).unwrap())
-            .unwrap();
+        f.write_str(core::str::from_utf8(&self.0.coto_utf8()).unwrap())?;
+        Ok(())
+    }
+}
+
+#[cfg(feature = "ufmt")]
+impl<T, const O: usize> uDebug for DebugODisplay<T, O>
+where
+    T: COtoUTF8<O>,
+{
+    fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
+    where
+        W: ufmt::uWrite + ?Sized,
+    {
+        f.write_str(core::str::from_utf8(&self.0.coto_utf8()).unwrap())?;
+        Ok(())
+    }
+}
+
+#[cfg(feature = "ufmt")]
+impl<T, const O: usize> uDisplay for DebugODisplay<T, O>
+where
+    T: COtoUTF8<O>,
+{
+    fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
+    where
+        W: ufmt::uWrite + ?Sized,
+    {
+        f.write_str(core::str::from_utf8(&self.0.coto_utf8()).unwrap())?;
         Ok(())
     }
 }
