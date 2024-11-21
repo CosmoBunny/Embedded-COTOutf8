@@ -1,6 +1,6 @@
 [package]
 name = "embedded_cotoutf8"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["Anurag"]
 description = "COTO is a library that translates numerical primitives into readable ASCII UTF-8 arrays"
