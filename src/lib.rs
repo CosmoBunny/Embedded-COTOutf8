@@ -12,7 +12,7 @@ Convert primitives data type to specific Byte(character) array for str
     let num: i8 = -127;
     let binding = num.coto_utf8();
     let result = core::str::from_utf8(&binding).unwrap();
-    assert_eq!(result, "-127")
+    assert_eq!(result, "-127");
     // for f32
     let num: f32 = 1524.001;
     let binding = num.coto_utf8();
@@ -24,6 +24,8 @@ Convert primitives data type to specific Byte(character) array for str
 Debug or Display for ufmt _By default ufmt feature enabled_ or fmt
 
 ```rust
+    use embedded_cotoutf8::DebugODisplay;
+
     let num = DebugODisplay(44245.12f32);
     println!("{}", num);
     ufmt::uwriteln!(serial, "{}", num); // for ufmt
