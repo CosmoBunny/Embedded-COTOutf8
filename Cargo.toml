@@ -1,6 +1,6 @@
 [package]
 name = "embedded_cotoutf8"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["Anurag"]
 description = "COTO is a library that translates numerical primitives into readable ASCII UTF-8 arrays"
@@ -8,7 +8,6 @@ repository = "https://github.com/unknownK19/Embedded-COTOutf8.git"
 categories = ["embedded"]
 keywords = ["no_std", "utf8", "str", "f32"]
 license = "MIT"
-license-file = "LICENSE"
 
 [profile.dev]
 panic = "abort"
@@ -19,7 +18,9 @@ panic = "abort"
 [features]
 default = ["ufmt"]
 ufmt = ["dep:ufmt"]
-floato = []
 
 [dependencies]
 ufmt = { version = "0.2", optional = true }
+
+[lib]
+doctest = false

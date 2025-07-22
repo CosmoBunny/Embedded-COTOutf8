@@ -40,29 +40,204 @@ use core::{
 
 use ufmt::{uDebug, uDisplay};
 
-#[cfg(feature = "floato")]
-pub mod floato;
-
 pub trait COtoUTF8<const O: usize> {
     fn coto_utf8(&self) -> [u8; O];
 }
 
-pub trait COtoHex<const O: usize> {
-    fn coto_hex(&self) -> [u8; O];
-}
-
+// u8 - max value 255 (3 digits)
 impl COtoUTF8<3> for u8 {
     fn coto_utf8(&self) -> [u8; 3] {
-        let mut digit: [u8; 3] = [0; 3];
-        let n = *self;
+        let mut result = [0u8; 3];
+        let mut n = *self;
 
-        for (i, j) in digit.iter_mut().enumerate() {
-            *j = b'0' + n / (10u8.pow(i as u32)) % 10
+        if n == 0 {
+            result[2] = b'0';
+            return result;
         }
 
-        digit.reverse();
-        digit
+        let mut pos = 2;
+        while n > 0 {
+            result[pos] = (n % 10) + b'0';
+            n /= 10;
+            pos = pos.saturating_sub(1);
+        }
+
+        result
     }
+}
+
+// u16 - max value 65535 (5 digits)
+impl COtoUTF8<5> for u16 {
+    fn coto_utf8(&self) -> [u8; 5] {
+        let mut result = [0u8; 5];
+        let mut n = *self;
+
+        if n == 0 {
+            result[4] = b'0';
+            return result;
+        }
+
+        let mut pos = 4;
+        while n > 0 {
+            result[pos] = (n % 10) as u8 + b'0';
+            n /= 10;
+            pos = pos.saturating_sub(1);
+        }
+
+        result
+    }
+}
+
+// u32 - max value 4294967295 (10 digits)
+impl COtoUTF8<10> for u32 {
+    fn coto_utf8(&self) -> [u8; 10] {
+        let mut result = [0u8; 10];
+        let mut n = *self;
+
+        if n == 0 {
+            result[9] = b'0';
+            return result;
+        }
+
+        let mut pos = 9;
+        while n > 0 {
+            result[pos] = (n % 10) as u8 + b'0';
+            n /= 10;
+            pos = pos.saturating_sub(1);
+        }
+
+        result
+    }
+}
+
+// u64 - max value 18446744073709551615 (20 digits)
+impl COtoUTF8<20> for u64 {
+    fn coto_utf8(&self) -> [u8; 20] {
+        let mut result = [0u8; 20];
+        let mut n = *self;
+
+        if n == 0 {
+            result[19] = b'0';
+            return result;
+        }
+
+        let mut pos = 19;
+        while n > 0 {
+            result[pos] = (n % 10) as u8 + b'0';
+            n /= 10;
+            pos = pos.saturating_sub(1);
+        }
+
+        result
+    }
+}
+
+// i8 - range -128 to 127 (4 digits including sign)
+impl COtoUTF8<4> for i8 {
+    fn coto_utf8(&self) -> [u8; 4] {
+        let mut result = [0u8; 4];
+        let mut n = self.abs() as u8;
+
+        if *self == 0 {
+            result[3] = b'0';
+            return result;
+        }
+
+        let mut pos = 3;
+        while n > 0 {
+            result[pos] = (n % 10) + b'0';
+            n /= 10;
+            pos = pos.saturating_sub(1);
+        }
+
+        if *self < 0 {
+            result[pos] = b'-';
+        }
+
+        result
+    }
+}
+
+// i16 - range -32768 to 32767 (6 digits including sign)
+impl COtoUTF8<6> for i16 {
+    fn coto_utf8(&self) -> [u8; 6] {
+        let mut result = [0u8; 6];
+        let mut n = self.abs() as u16;
+
+        if *self == 0 {
+            result[5] = b'0';
+            return result;
+        }
+
+        let mut pos = 5;
+        while n > 0 {
+            result[pos] = (n % 10) as u8 + b'0';
+            n /= 10;
+            pos = pos.saturating_sub(1);
+        }
+
+        if *self < 0 {
+            result[pos] = b'-';
+        }
+
+        result
+    }
+}
+
+// i32 - range -2147483648 to 2147483647 (11 digits including sign)
+impl COtoUTF8<11> for i32 {
+    fn coto_utf8(&self) -> [u8; 11] {
+        let mut result = [0u8; 11];
+        let mut n = self.abs() as u32;
+
+        if *self == 0 {
+            result[10] = b'0';
+            return result;
+        }
+
+        let mut pos = 10;
+        while n > 0 {
+            result[pos] = (n % 10) as u8 + b'0';
+            n /= 10;
+            pos = pos.saturating_sub(1);
+        }
+
+        if *self < 0 {
+            result[pos] = b'-';
+        }
+
+        result
+    }
+}
+
+// i64 - range -9223372036854775808 to 9223372036854775807 (20 digits including sign)
+impl COtoUTF8<20> for i64 {
+    fn coto_utf8(&self) -> [u8; 20] {
+        let mut result = [0u8; 20];
+        let mut n = self.abs() as u64; // Use u64 to handle i64::MIN safely
+
+        if *self == 0 {
+            result[19] = b'0';
+            return result;
+        }
+
+        let mut pos = 19;
+        while n > 0 {
+            result[pos] = (n % 10) as u8 + b'0';
+            n /= 10;
+            pos = pos.saturating_sub(1);
+        }
+
+        if *self < 0 {
+            result[pos] = b'-';
+        }
+
+        result
+    }
+}
+
+pub trait COtoHex<const O: usize> {
+    fn coto_hex(&self) -> [u8; O];
 }
 
 pub struct DebugODisplay<T: COtoUTF8<O>, const O: usize>(pub T);
@@ -233,97 +408,6 @@ impl COtoUTF8<11> for f64 {
     }
 }
 
-impl COtoUTF8<4> for i8 {
-    fn coto_utf8(&self) -> [u8; 4] {
-        let mut digit: [u8; 4] = [0; 4];
-        digit[0] = if self.is_negative() { b'-' } else { b' ' };
-        let n = self.abs();
-
-        for (i, j) in digit[1..].iter_mut().enumerate() {
-            *j = (n / (10i8.pow(i as u32)) % 10) as u8 + b'0'
-        }
-
-        digit[1..].reverse();
-
-        digit
-    }
-}
-
-impl COtoUTF8<6> for i16 {
-    fn coto_utf8(&self) -> [u8; 6] {
-        let mut digit: [u8; 6] = [0; 6];
-        digit[0] = if self.is_negative() { b'-' } else { b' ' };
-        let n = self.abs();
-
-        for (i, j) in digit[1..].iter_mut().enumerate() {
-            *j = (n / (10i16.pow(i as u32)) % 10) as u8 + b'0'
-        }
-
-        digit[1..].reverse();
-
-        digit
-    }
-}
-
-impl COtoUTF8<11> for i32 {
-    fn coto_utf8(&self) -> [u8; 11] {
-        let mut digit: [u8; 11] = [0; 11];
-        digit[0] = if self.is_negative() { b'-' } else { b' ' };
-        let n = self.abs();
-
-        for (i, j) in digit[1..].iter_mut().enumerate() {
-            *j = (n / (10i32.pow(i as u32)) % 10) as u8 + b'0'
-        }
-
-        digit[1..].reverse();
-
-        digit
-    }
-}
-impl COtoUTF8<20> for i64 {
-    fn coto_utf8(&self) -> [u8; 20] {
-        let mut digit = [0u8; 20];
-        digit[0] = if self.is_negative() { b'-' } else { b' ' };
-        let n = self.abs();
-
-        for (i, j) in digit[1..].iter_mut().enumerate() {
-            *j = (n / (10i64.pow(i as u32)) % 10) as u8 + b'0'
-        }
-
-        digit[1..].reverse();
-
-        digit
-    }
-}
-
-impl COtoUTF8<10> for u32 {
-    fn coto_utf8(&self) -> [u8; 10] {
-        let mut digit: [u8; 10] = [0; 10];
-        let n = *self;
-
-        for (i, j) in digit.iter_mut().enumerate() {
-            *j = (n / (10u32.pow(i as u32)) % 10) as u8 + b'0'
-        }
-
-        digit.reverse();
-        digit
-    }
-}
-
-impl COtoUTF8<5> for u16 {
-    fn coto_utf8(&self) -> [u8; 5] {
-        let mut digit: [u8; 5] = [0; 5];
-        let n = *self;
-
-        for (i, j) in digit.iter_mut().enumerate() {
-            *j = (n / (10u16.pow(i as u32)) % 10) as u8 + b'0'
-        }
-
-        digit.reverse();
-        digit
-    }
-}
-
 #[test]
 fn utf8test() {
     assert_eq!("123", core::str::from_utf8(&123u8.coto_utf8()).unwrap());
@@ -335,13 +419,13 @@ fn utf8test() {
         "1234567890",
         core::str::from_utf8(&1234567890u32.coto_utf8()).unwrap()
     );
-    assert_eq!(" 123", core::str::from_utf8(&123i8.coto_utf8()).unwrap());
+    assert_eq!("\0123", core::str::from_utf8(&123i8.coto_utf8()).unwrap());
     assert_eq!(
         "-12345",
         core::str::from_utf8(&(-12345i16).coto_utf8()).unwrap()
     );
     assert_eq!(
-        " 1234567890",
+        "\01234567890",
         core::str::from_utf8(&1234567890i32.coto_utf8()).unwrap()
     );
     assert_eq!(
